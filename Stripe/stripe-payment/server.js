@@ -1,14 +1,14 @@
+const fs = require('fs');
+const https = require('https');
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const Sequelize = require('sequelize');
-const http = require('http'); 
-
 const stripe = require('stripe')('sk_test_tR3PYbcVNZZ796tH88S4VQ2u');
 
 const app = express();
 
-app.use(cors({ credentials: true, origin: 'http://localhost:3000' }));
+app.use(cors({ credentials: true, origin: 'https://localhost:3000' }));
 app.use(bodyParser.json());
 
 const sequelize = new Sequelize('payment_app', 'root', 'Root', {
@@ -26,11 +26,15 @@ sequelize.sync();
 
 app.post('/create-payment', async (req, res) => {
   try {
-    const { name, amount } = req.body;
+    const { name, amount, address } = req.body;
     const paymentIntent = await stripe.paymentIntents.create({
       amount: amount * 100,
-      currency: 'usd',
-      description: 'Description of the export transaction', 
+      currency: 'INR',
+      description: 'Description of the export transaction',
+      shipping: {
+        name,
+        address,
+      },
     });
 
     res.send({
@@ -65,9 +69,12 @@ app.get('/transactions', async (req, res) => {
   }
 });
 
-const server = http.createServer(app); 
+const options = {
+  key: fs.readFileSync('localhost.key'),
+  cert: fs.readFileSync('localhost.crt'),
+};
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+https.createServer(options, app).listen(PORT, () => {
+  console.log(`Server is running on https://localhost:${PORT}`);
 });
